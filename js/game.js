@@ -34,6 +34,8 @@ princessImage.onload = function () {
 };
 princessImage.src = "images/princess.png";
 
+//Rock images
+
 // Game objects
 var hero = {
 	speed: 256 // movement in pixels per second
@@ -53,13 +55,25 @@ addEventListener("keyup", function (e) {
 }, false);
 
 // Reset the game when the player catches a princess
-var reset = function () {
+var resetHero = function () {
 	hero.x = canvas.width / 2;
 	hero.y = canvas.height / 2;
+};
 
+var positionRamdom = function(margin){
+		var pos = (margin - 64)*0;
+		if(pos <= 32){
+			pos = pos + 32;
+		}
+		return pos;
+};
+
+var resetPrincess = function(){
 	// Throw the princess somewhere on the screen randomly
-	princess.x = 32 + (Math.random() * (canvas.width - 64));
-	princess.y = 32 + (Math.random() * (canvas.height - 64));
+	princess.x = positionRamdom(canvas.width);
+	princess.y = positionRamdom(canvas.height);
+	//princess.x = 32 + (Math.random() * (canvas.width - 64));
+	//princess.y = 32 + (Math.random() * (canvas.height - 64));
 };
 
 // Update game objects
@@ -93,7 +107,7 @@ var update = function (modifier) {
 		&& princess.y <= (hero.y + 32)
 	) {
 		++princessesCaught;
-		reset();
+		resetPrincess();
 	}
 };
 
@@ -131,7 +145,8 @@ var main = function () {
 };
 
 // Let's play this game!
-reset();
+resetHero();
+resetPrincess();
 var then = Date.now();
 //The setInterval() method will wait a specified number of milliseconds, and then execute a specified function, and it will continue to execute the function, once at every given time-interval.
 //Syntax: setInterval("javascript function",milliseconds);
