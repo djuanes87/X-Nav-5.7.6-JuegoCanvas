@@ -34,7 +34,12 @@ princessImage.onload = function () {
 };
 princessImage.src = "images/princess.png";
 
-//Rock images
+var rockReady = false;
+var rockImage = new Image();
+rockImage.onload = function(){
+	rockReady = true;
+};
+rockImage.src = "images/stone.png";
 
 // Game objects
 var hero = {
@@ -42,6 +47,8 @@ var hero = {
 };
 var princess = {};
 var princessesCaught = 0;
+var rocks =[];
+var nrocks = 30;
 
 // Handle keyboard controls
 var keysDown = {};
@@ -60,8 +67,22 @@ var resetHero = function () {
 	hero.y = canvas.height / 2;
 };
 
+var checkPositionRocks = function(obj){
+	var rock = {};
+	for(i=0; i<nrocks; i++){
+		rock = rocks[i];
+		if(rock == undefined){
+			return true;
+		}
+		if ((obj.x - 16) <= (rock.x + 16) && (obj.x + 16)>= (rock.x - 16) && (obj.y - 16) <= (rock.y + 16) && (obj.y + 16) >= (rock.y - 16)) {
+			return false;
+		}
+	}
+	return true;
+};
+
 var positionRamdom = function(margin){
-		var pos = (margin - 64)*0;
+		var pos = (Math.random()*(margin - 64));
 		if(pos <= 32){
 			pos = pos + 32;
 		}
@@ -70,30 +91,50 @@ var positionRamdom = function(margin){
 
 var resetPrincess = function(){
 	// Throw the princess somewhere on the screen randomly
-	princess.x = positionRamdom(canvas.width);
-	princess.y = positionRamdom(canvas.height);
-	//princess.x = 32 + (Math.random() * (canvas.width - 64));
-	//princess.y = 32 + (Math.random() * (canvas.height - 64));
+	do{
+		princess.x = positionRamdom(canvas.width);
+		princess.y = positionRamdom(canvas.height);
+	}while(!checkPositionRocks(princess));
+};
+
+var initRocks = function(){
+	for (i = 0; i < nrocks; i++){
+		var rock ={};
+		rock.x = 0;
+		rock.y = 0;
+		rocks[i]=rock;
+	}
+};
+
+var resetRocks = function(){
+	for(i = 0; i<nrocks; i++){
+		var rock = {};
+		do{
+			rock.x = positionRamdom(canvas.width);
+			rock.y = positionRamdom(canvas.height);
+		}while(!checkPositionRocks(rock));
+		rocks[i]=rock;
+	}
 };
 
 // Update game objects
 var update = function (modifier) {
-	if (38 in keysDown) { // Player holding up
+	if (38 in keysDown && !checkPositionRocks(hero)) { // Player holding up
 		if(hero.y >=(32)){ //Impide que salga por arriba
 			hero.y -= hero.speed * modifier;
 		}
 	}
 	if (40 in keysDown) { // Player holding down
-		if(hero.y <=((canvas.height-64))){ //Impide que salga por abajo
+		if(hero.y <=((canvas.height-64)) && !checkPositionRocks(hero)){ //Impide que salga por abajo
 			hero.y += hero.speed * modifier;
 		}
 	}
-	if (37 in keysDown) { // Player holding left
+	if (37 in keysDown && !checkPositionRocks(hero)) { // Player holding left
 		if(hero.x >= 32){//Impide salir por la izquierda
 			hero.x -= hero.speed * modifier;
 		}
 	}
-	if (39 in keysDown) { // Player holding right
+	if (39 in keysDown && !checkPositionRocks(hero)) { // Player holding right
 		if(hero.x <= ((canvas.width - 64))){ //impide salir por la derecha
 			hero.x += hero.speed * modifier;
 		}
@@ -125,6 +166,14 @@ var render = function () {
 		ctx.drawImage(princessImage, princess.x, princess.y);
 	}
 
+		if(rockReady){
+			for(j=0; j<nrocks; j++){
+				var rock = {};
+				rock = rocks[j];
+				ctx.drawImage(rockImage, rock.x, rock.y);
+		}
+	}
+
 	// Score
 	ctx.fillStyle = "rgb(250, 250, 250)";
 	ctx.font = "24px Helvetica";
@@ -146,7 +195,9 @@ var main = function () {
 
 // Let's play this game!
 resetHero();
+resetRocks();
 resetPrincess();
+
 var then = Date.now();
 //The setInterval() method will wait a specified number of milliseconds, and then execute a specified function, and it will continue to execute the function, once at every given time-interval.
 //Syntax: setInterval("javascript function",milliseconds);
