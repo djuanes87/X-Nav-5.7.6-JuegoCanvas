@@ -3,6 +3,13 @@
 // Slight modifications by Gregorio Robles <grex@gsyc.urjc.es>
 // to meet the criteria of a canvas class for DAT @ Univ. Rey Juan Carlos
 
+//Contantes
+const LEFT = 1;
+const RIGHT = 2;
+const UP = 3;
+const DOWN = 4;
+const ALLPOS = 0;
+
 // Create the canvas
 var canvas = document.createElement("canvas");
 var ctx = canvas.getContext("2d");
@@ -48,7 +55,7 @@ var hero = {
 var princess = {};
 var princessesCaught = 0;
 var rocks =[];
-var nrocks = 30;
+var nrocks = 10;
 
 // Handle keyboard controls
 var keysDown = {};
@@ -67,18 +74,82 @@ var resetHero = function () {
 	hero.y = canvas.height / 2;
 };
 
-var checkPositionRocks = function(obj){
+var checkPositionHero = function(obj){
+	if ((obj.x - 16) <= (hero.x + 16)
+	&& (obj.x + 16) >= (hero.x - 16)
+	&& (obj.y - 16) <= (hero.y + 16)
+	&& (obj.y + 16) >= (hero.y - 16)
+	){
+		return false;
+	}
+	return true;
+};
+
+var checkPos = function(pos1, pos2){
+	if((pos1 - 16) <= (pos2 + 16)){
+		return true;
+	}
+	return false;
+};
+
+var checkPositionRocks = function(obj, pos){
 	var rock = {};
+	var encima = false;
 	for(i=0; i<nrocks; i++){
 		rock = rocks[i];
 		if(rock == undefined){
-			return true;
+			return encima;
 		}
-		if ((obj.x - 16) <= (rock.x + 16) && (obj.x + 16)>= (rock.x - 16) && (obj.y - 16) <= (rock.y + 16) && (obj.y + 16) >= (rock.y - 16)) {
-			return false;
+		if (checkPos(obj.x, rock.x)
+		&& checkPos(rock.x, obj.x)
+		&& checkPos(obj.y, rock.y)
+		&& checkPos(rock.y, obj.y)
+		){
+			encima = true;
 		}
 	}
-	return true;
+	if(pos == ALLPOS){
+		return encima;
+	}
+	for(i=0; i<nrocks; i++){
+		var rock = {};
+	 	rock = rocks[i];
+		if(encima){
+			switch(pos){
+				case LEFT:
+					if (!((hero.x - 16) < ((rock.x) - 16))){
+						return true;
+					}else{
+						encima = false;
+					}
+					break;
+				case RIGHT:
+					if (!((hero.x + 16) > ((rock.x) + 16))){
+						return true;
+					}else{
+						encima = false;
+					}
+					break;
+				case DOWN:
+					if (!((hero.y + 16) > ((rock.y) + 16))){
+						return true;
+					}else{
+						encima = false;
+					}
+					break;
+				case UP:
+					if (!((hero.x - 16) < ((rock.x) - 16))){
+						return true;
+					}else{
+						encima = false;
+					}
+					break;
+				default:
+			}
+		}
+	}
+
+	return encima;
 };
 
 var positionRamdom = function(margin){
@@ -94,7 +165,7 @@ var resetPrincess = function(){
 	do{
 		princess.x = positionRamdom(canvas.width);
 		princess.y = positionRamdom(canvas.height);
-	}while(!checkPositionRocks(princess));
+	}while(checkPositionRocks(princess, ALLPOS));
 };
 
 var initRocks = function(){
@@ -112,29 +183,29 @@ var resetRocks = function(){
 		do{
 			rock.x = positionRamdom(canvas.width);
 			rock.y = positionRamdom(canvas.height);
-		}while(!checkPositionRocks(rock));
+		}while(checkPositionRocks(rock, ALLPOS) || !checkPositionHero(rock));
 		rocks[i]=rock;
 	}
 };
 
 // Update game objects
 var update = function (modifier) {
-	if (38 in keysDown && !checkPositionRocks(hero)) { // Player holding up
+	if (38 in keysDown && !checkPositionRocks(hero, UP)) { // Player holding up
 		if(hero.y >=(32)){ //Impide que salga por arriba
 			hero.y -= hero.speed * modifier;
 		}
 	}
 	if (40 in keysDown) { // Player holding down
-		if(hero.y <=((canvas.height-64)) && !checkPositionRocks(hero)){ //Impide que salga por abajo
+		if(hero.y <=((canvas.height-64)) && !checkPositionRocks(hero, DOWN)){ //Impide que salga por abajo
 			hero.y += hero.speed * modifier;
 		}
 	}
-	if (37 in keysDown && !checkPositionRocks(hero)) { // Player holding left
+	if (37 in keysDown && !checkPositionRocks(hero, LEFT)) { // Player holding left
 		if(hero.x >= 32){//Impide salir por la izquierda
 			hero.x -= hero.speed * modifier;
 		}
 	}
-	if (39 in keysDown && !checkPositionRocks(hero)) { // Player holding right
+	if (39 in keysDown && !checkPositionRocks(hero, RIGHT)) { // Player holding right
 		if(hero.x <= ((canvas.width - 64))){ //impide salir por la derecha
 			hero.x += hero.speed * modifier;
 		}
