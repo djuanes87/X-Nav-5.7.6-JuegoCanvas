@@ -10,6 +10,8 @@ const UP = 3;
 const DOWN = 4;
 const ALLPOS = 0;
 
+const SIZEOBJECT = 32;
+
 // Create the canvas
 var canvas = document.createElement("canvas");
 var ctx = canvas.getContext("2d");
@@ -31,7 +33,7 @@ var heroImage = new Image();
 heroImage.onload = function () {
 	heroReady = true;
 };
-heroImage.src = "images/hero.png";
+heroImage.src = "images/gohan.gif";
 
 // princess image
 var princessReady = false;
@@ -39,7 +41,7 @@ var princessImage = new Image();
 princessImage.onload = function () {
 	princessReady = true;
 };
-princessImage.src = "images/princess.png";
+princessImage.src = "images/DB5.png";
 
 var rockReady = false;
 var rockImage = new Image();
@@ -94,63 +96,51 @@ var checkPos = function(pos1, pos2){
 
 var checkPositionRocks = function(obj, pos){
 	var rock = {};
-	var encima = false;
 	for(i=0; i<nrocks; i++){
 		rock = rocks[i];
 		if(rock == undefined){
-			return encima;
+			return false;
 		}
 		if (checkPos(obj.x, rock.x)
 		&& checkPos(rock.x, obj.x)
 		&& checkPos(obj.y, rock.y)
 		&& checkPos(rock.y, obj.y)
 		){
-			encima = true;
+			return  true;
 		}
 	}
-	if(pos == ALLPOS){
-		return encima;
-	}
-	for(i=0; i<nrocks; i++){
-		var rock = {};
-	 	rock = rocks[i];
-		if(encima){
-			switch(pos){
-				case LEFT:
-					if (!((hero.x - 16) < ((rock.x) - 16))){
-						return true;
-					}else{
-						encima = false;
-					}
-					break;
-				case RIGHT:
-					if (!((hero.x + 16) > ((rock.x) + 16))){
-						return true;
-					}else{
-						encima = false;
-					}
-					break;
-				case DOWN:
-					if (!((hero.y + 16) > ((rock.y) + 16))){
-						return true;
-					}else{
-						encima = false;
-					}
-					break;
-				case UP:
-					if (!((hero.x - 16) < ((rock.x) - 16))){
-						return true;
-					}else{
-						encima = false;
-					}
-					break;
-				default:
-			}
-		}
+	return false;
+};
+
+var isNearRock = function(obj, pos){
+	switch (pos){
+		case LEFT:
+			return nearRock(obj.x-3, obj.y);
+			break;
+		case RIGHT:
+			return nearRock(obj.x+3, obj.y);
+			break;
+		case UP:
+			return nearRock(obj.x, obj.y - 3);
+			break;
+		case DOWN:
+			return nearRock(obj.x, obj.y + 3);
+			break;
+
 	}
 
-	return encima;
+}
+
+var nearRock = function(x, y){
+	for(i=0; i<nrocks; i++){
+		if((Math.sqrt(Math.pow((x - rocks[i].x), 2)
+					+ Math.pow((y - rocks[i].y), 2))) < 32){
+						return false;
+					}
+	}
+	return true;
 };
+
 
 var positionRamdom = function(margin){
 		var pos = (Math.random()*(margin - 64));
@@ -168,15 +158,6 @@ var resetPrincess = function(){
 	}while(checkPositionRocks(princess, ALLPOS));
 };
 
-var initRocks = function(){
-	for (i = 0; i < nrocks; i++){
-		var rock ={};
-		rock.x = 0;
-		rock.y = 0;
-		rocks[i]=rock;
-	}
-};
-
 var resetRocks = function(){
 	for(i = 0; i<nrocks; i++){
 		var rock = {};
@@ -190,22 +171,22 @@ var resetRocks = function(){
 
 // Update game objects
 var update = function (modifier) {
-	if (38 in keysDown && !checkPositionRocks(hero, UP)) { // Player holding up
+	if (38 in keysDown && isNearRock(hero, UP)) { // Player holding up
 		if(hero.y >=(32)){ //Impide que salga por arriba
 			hero.y -= hero.speed * modifier;
 		}
 	}
 	if (40 in keysDown) { // Player holding down
-		if(hero.y <=((canvas.height-64)) && !checkPositionRocks(hero, DOWN)){ //Impide que salga por abajo
+		if(hero.y <=((canvas.height-64)) && isNearRock(hero, DOWN)){ //Impide que salga por abajo
 			hero.y += hero.speed * modifier;
 		}
 	}
-	if (37 in keysDown && !checkPositionRocks(hero, LEFT)) { // Player holding left
+	if (37 in keysDown && isNearRock(hero, LEFT)) { // Player holding left
 		if(hero.x >= 32){//Impide salir por la izquierda
 			hero.x -= hero.speed * modifier;
 		}
 	}
-	if (39 in keysDown && !checkPositionRocks(hero, RIGHT)) { // Player holding right
+	if (39 in keysDown && isNearRock(hero, RIGHT)) { // Player holding right
 		if(hero.x <= ((canvas.width - 64))){ //impide salir por la derecha
 			hero.x += hero.speed * modifier;
 		}
