@@ -9,6 +9,9 @@ const RIGHT = 2;
 const UP = 3;
 const DOWN = 4;
 const ALLPOS = 0;
+const MAXNROCKS = 15;
+const MAXNMONSTERS = 10;
+const INCREMENTVEL = 10;
 
 const SIZEOBJECT = 32;
 
@@ -33,7 +36,7 @@ var heroImage = new Image();
 heroImage.onload = function () {
 	heroReady = true;
 };
-heroImage.src = "images/gohan.gif";
+heroImage.src = "images/hero.png";
 
 // princess image
 var princessReady = false;
@@ -41,8 +44,17 @@ var princessImage = new Image();
 princessImage.onload = function () {
 	princessReady = true;
 };
-princessImage.src = "images/DB5.png";
+princessImage.src = "images/princess.png";
 
+//monster image
+var monsterReady = false;
+var monsterImage = new Image();
+monsterImage.onload = function(){
+	monsterReady = true;
+};
+monsterImage.src = "images/monster.png";
+
+//stone image
 var rockReady = false;
 var rockImage = new Image();
 rockImage.onload = function(){
@@ -57,7 +69,11 @@ var hero = {
 var princess = {};
 var princessesCaught = 0;
 var rocks =[];
-var nrocks = 10;
+var nrocks = 0;
+var monsters = [];
+var nmonster = 0;
+var speedmonster = 0;
+var level = 1;
 
 // Handle keyboard controls
 var keysDown = {};
@@ -76,11 +92,10 @@ var resetHero = function () {
 	hero.y = canvas.height / 2;
 };
 
-var checkPositionHero = function(obj){
-	if ((obj.x - 16) <= (hero.x + 16)
-	&& (obj.x + 16) >= (hero.x - 16)
-	&& (obj.y - 16) <= (hero.y + 16)
-	&& (obj.y + 16) >= (hero.y - 16)
+var checkSuperposition = function(obj1, obj2){
+
+	if (checkPos(obj1.x, obj2.x) && checkPos(obj2.x, obj1.x)
+	&& checkPos(obj1.y, obj2.y) && checkPos(obj2.y, obj1.y)
 	){
 		return false;
 	}
@@ -94,18 +109,29 @@ var checkPos = function(pos1, pos2){
 	return false;
 };
 
-var checkPositionRocks = function(obj, pos){
+var checkPositionMonsters = function(obj){
+	var m = {};
+	for(i=0; i<nmonster; i++){
+		m = monsters[i];
+		if(m == undefined){
+			return false;
+		}
+		if (!checkSuperposition(obj, m)
+		){
+			return  true;
+		}
+	}
+	return false;
+};
+
+var checkPositionRocks = function(obj){
 	var rock = {};
 	for(i=0; i<nrocks; i++){
 		rock = rocks[i];
 		if(rock == undefined){
 			return false;
 		}
-		if (checkPos(obj.x, rock.x)
-		&& checkPos(rock.x, obj.x)
-		&& checkPos(obj.y, rock.y)
-		&& checkPos(rock.y, obj.y)
-		){
+		if (!checkSuperposition(obj, rock)){
 			return  true;
 		}
 	}
@@ -115,21 +141,19 @@ var checkPositionRocks = function(obj, pos){
 var isNearRock = function(obj, pos){
 	switch (pos){
 		case LEFT:
-			return nearRock(obj.x-3, obj.y);
+			return nearRock(obj.x-10, obj.y);
 			break;
 		case RIGHT:
-			return nearRock(obj.x+3, obj.y);
+			return nearRock(obj.x+10, obj.y);
 			break;
 		case UP:
-			return nearRock(obj.x, obj.y - 3);
+			return nearRock(obj.x, obj.y - 10);
 			break;
 		case DOWN:
-			return nearRock(obj.x, obj.y + 3);
+			return nearRock(obj.x, obj.y + 10);
 			break;
-
 	}
-
-}
+};
 
 var nearRock = function(x, y){
 	for(i=0; i<nrocks; i++){
@@ -155,22 +179,52 @@ var resetPrincess = function(){
 	do{
 		princess.x = positionRamdom(canvas.width);
 		princess.y = positionRamdom(canvas.height);
-	}while(checkPositionRocks(princess, ALLPOS));
+	}while(checkPositionRocks(princess));
+};
+
+var resetMosters = function(){
+	monsters = [];
+	for(i=0; i<nmonster; i++){
+		var m = {};
+		do{
+			m.x = positionRamdom(canvas.width);
+			m.y = positionRamdom(canvas.height);
+		}while(!checkSuperposition(m, princess)
+		|| !checkSuperposition(m, hero)
+		|| checkPositionRocks(m)
+	 	|| checkPositionMonsters(m));
+
+		monsters[i]=m;
+	}
 };
 
 var resetRocks = function(){
+	rocks = [];
 	for(i = 0; i<nrocks; i++){
 		var rock = {};
 		do{
 			rock.x = positionRamdom(canvas.width);
 			rock.y = positionRamdom(canvas.height);
-		}while(checkPositionRocks(rock, ALLPOS) || !checkPositionHero(rock));
+		}while(checkPositionRocks(rock)
+		 || !checkSuperposition(hero ,rock));
 		rocks[i]=rock;
 	}
 };
 
-// Update game objects
-var update = function (modifier) {
+var resetAll = function(){
+	resetHero();
+	resetRocks();
+	resetPrincess();
+	resetMosters();
+	princessesCaught = 0;
+	level = 1;
+	nmonster = 0;
+	nrocks = 0;
+	speedmonster = 0;
+};
+
+//Movimiento del Heroe
+var moveHero = function(modifier){
 	if (38 in keysDown && isNearRock(hero, UP)) { // Player holding up
 		if(hero.y >=(32)){ //Impide que salga por arriba
 			hero.y -= hero.speed * modifier;
@@ -191,7 +245,37 @@ var update = function (modifier) {
 			hero.x += hero.speed * modifier;
 		}
 	}
+};
 
+//Movimiento del monstruo
+var moveMonster = function(modifier){
+	var m = {};
+	for(k=0; k<nmonster; k++){
+		m = monsters[k];
+		if(hero.x > m.x && isNearRock(m, RIGHT)){
+			m.x += speedmonster * modifier;
+		}
+		if(hero.x < m.x && isNearRock(m, LEFT)){
+			m.x -= speedmonster * modifier;
+		}
+		if(hero.y > m.y && isNearRock(m, UP)){
+			m.y += speedmonster * modifier;
+		}
+		if(hero.y < m.y && isNearRock(m, DOWN)){
+			m.y -= speedmonster * modifier;
+		}
+		if (
+			hero.x <= (m.x + 16)
+			&& m.x <= (hero.x + 16)
+			&& hero.y <= (m.y + 16)
+			&& m.y <= (hero.y + 32)
+		){
+			resetAll();
+		}
+	}
+}
+
+var touchprincess = function(){
 	// Are they touching?
 	if (
 		hero.x <= (princess.x + 16)
@@ -201,7 +285,44 @@ var update = function (modifier) {
 	) {
 		++princessesCaught;
 		resetPrincess();
+		return true;
 	}
+	return false;
+};
+
+var upLevelMonster = function(){
+	if(speedmonster < hero.speed){
+		speedmonster += INCREMENTVEL;
+	}
+	if(nmonster < MAXNMONSTERS){
+		nmonster++;
+	}
+};
+
+var moreRocks = function(){
+	if(nrocks < MAXNROCKS){
+		nrocks++;
+	}
+};
+
+//uplevel
+var upLevel = function(){
+	if(touchprincess() == true && (princessesCaught % 5 == 0)){
+		level++;
+		upLevelMonster();
+		moreRocks();
+		resetHero();
+		resetRocks();
+		resetPrincess();
+		resetMosters();
+	}
+};
+
+// Update game objects
+var update = function (modifier) {
+	moveHero(modifier);
+	moveMonster(modifier);
+	upLevel();
 };
 
 // Draw everything
@@ -218,11 +339,19 @@ var render = function () {
 		ctx.drawImage(princessImage, princess.x, princess.y);
 	}
 
-		if(rockReady){
-			for(j=0; j<nrocks; j++){
-				var rock = {};
-				rock = rocks[j];
-				ctx.drawImage(rockImage, rock.x, rock.y);
+	if(rockReady){
+		for(j=0; j<nrocks; j++){
+			var rock = {};
+			rock = rocks[j];
+			ctx.drawImage(rockImage, rock.x, rock.y);
+		}
+	}
+
+	if(monsterReady){
+		for(i=0 ;i<nmonster; i++){
+			var m = {};
+			m = monsters[i];
+			ctx.drawImage(monsterImage, m.x, m.y);
 		}
 	}
 
@@ -231,7 +360,7 @@ var render = function () {
 	ctx.font = "24px Helvetica";
 	ctx.textAlign = "left";
 	ctx.textBaseline = "top";
-	ctx.fillText("Princesses caught: " + princessesCaught, 32, 32);
+	ctx.fillText("Princesses caught: " + princessesCaught + "  Level: "+level, 32, 32);
 };
 
 // The main game loop
@@ -246,9 +375,8 @@ var main = function () {
 };
 
 // Let's play this game!
-resetHero();
-resetRocks();
-resetPrincess();
+resetAll();
+
 
 var then = Date.now();
 //The setInterval() method will wait a specified number of milliseconds, and then execute a specified function, and it will continue to execute the function, once at every given time-interval.
